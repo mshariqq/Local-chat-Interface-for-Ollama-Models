@@ -1,4 +1,5 @@
 It only works on Linux currently, cause ./run.sh
+![Screenshot Description](screenshot.png)
 
 # LGPT
 Run your own chat interface lightweight with just html and simple webserver with bash connected to your Ollama models.
@@ -14,4 +15,8 @@ Just `./run.sh` to start
 - Memory optimized 
 - Local DB folder to store all sessions, chats history
 
-Made with ❤️ by [Muhammed Shariqq Ahmed] | [Website Link](https://cksoftwares.com)
+----------------
+Made with ❤️ by Muhammed Shariqq Ahmed | [Best Developer in Hyderabad](https://cksoftwares.com)
+HIRE Me on Whatsapp | [Open Whatsapp](https://wa.me/917997807419)
+Email | mshariq@cksoftwares.com
+~ Hyderabad, India
