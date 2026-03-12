@@ -16,7 +16,8 @@ Just `./run.sh` to start
 - Local DB folder to store all sessions, chats history
 
 ----------------
-Made with ❤️ by Muhammed Shariqq Ahmed | [Best Developer in Hyderabad](https://cksoftwares.com)
-HIRE Me on Whatsapp | [Open Whatsapp](https://wa.me/917997807419)
-Email | mshariq@cksoftwares.com
-~ Hyderabad, India
+Made with ❤️ by Muhammed Shariqq Ahmed
+- My Website : [Best Developer in Hyderabad](https://cksoftwares.com)
+- HIRE Me on Whatsapp | [Open Whatsapp](https://wa.me/917997807419)
+- Email | mshariq@cksoftwares.com
+- ~ Hyderabad, India
