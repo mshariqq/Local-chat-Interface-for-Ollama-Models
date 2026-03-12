@@ -1,0 +1,9 @@
+{
+  "systemPrompt": "/no_think",
+  "projectCtx": "Laravel, Filament, TODO App, MYsql",
+  "codeCtx": "",
+  "personaOn": false,
+  "projectOn": true,
+  "codeOn": false,
+  "activePersona": "custom"
+}

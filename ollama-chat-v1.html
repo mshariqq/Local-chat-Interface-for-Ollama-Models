@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRQ AI</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0d0d; --surface:#161616; --surface2:#1e1e1e; --surface3:#232323;
+    --border:#2a2a2a; --accent:#00ff88; --accent2:#00cc6a;
+    --text:#e8e8e8; --text-muted:#555;
+    --user-bg:#1a2a1e; --ai-bg:#161616; --code-bg:#0a0a0a;
+    --danger:#ff4444; --warn:#ffaa00; --blue:#4499ff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+  /* HEADER */
+  header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;gap:10px;}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:0.95rem;letter-spacing:-0.5px;flex-shrink:0;}
+  .logo-dot{width:9px;height:9px;background:var(--accent);border-radius:50%;box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.75)}}
+  .header-center{display:flex;align-items:center;gap:6px;flex:1;justify-content:center;}
+  .ctx-pill{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:0.63rem;font-family:'JetBrains Mono',monospace;border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+  .ctx-pill:hover{border-color:var(--accent);color:var(--accent);}
+  .ctx-pill.active{border-color:var(--accent);color:var(--accent);background:#00ff8811;}
+  .ctx-pill .dot{width:5px;height:5px;border-radius:50%;background:var(--text-muted);}
+  .ctx-pill.active .dot{background:var(--accent);box-shadow:0 0 4px var(--accent);}
+  .header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  select{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:5px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;cursor:pointer;outline:none;max-width:180px;}
+  select:focus{border-color:var(--accent);}
+  .btn-icon{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);width:30px;height:30px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.8rem;transition:all 0.2s;flex-shrink:0;}
+  .btn-icon:hover{border-color:var(--accent);color:var(--accent);}
+  .status-bar{display:flex;align-items:center;gap:5px;font-size:0.62rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted);}
+  .status-dot.online{background:var(--accent);box-shadow:0 0 4px var(--accent);}
+  .status-dot.error{background:var(--danger);}
+
+  /* LAYOUT */
+  .app{display:flex;flex:1;overflow:hidden;}
+
+  /* SIDEBAR */
+  .sidebar{width:200px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+  .sidebar-header{padding:12px 12px 8px;font-size:0.62rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .new-chat-btn{background:var(--accent);color:#000;border:none;padding:3px 9px;border-radius:4px;font-family:'Syne',sans-serif;font-weight:700;font-size:0.68rem;cursor:pointer;transition:background 0.2s;}
+  .new-chat-btn:hover{background:var(--accent2);}
+  .sessions-list{flex:1;overflow-y:auto;padding:6px;}
+  .sessions-list::-webkit-scrollbar{width:3px;}
+  .sessions-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .session-item{padding:7px 9px;border-radius:6px;cursor:pointer;font-size:0.75rem;color:var(--text-muted);transition:all 0.15s;display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:2px;}
+  .session-item:hover{background:var(--surface2);color:var(--text);}
+  .session-item.active{background:var(--user-bg);color:var(--accent);border:1px solid #00ff8833;}
+  .session-title{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .session-meta{font-size:0.6rem;color:var(--text-muted);opacity:0.6;flex-shrink:0;}
+  .session-delete{opacity:0;font-size:0.65rem;color:var(--danger);flex-shrink:0;}
+  .session-item:hover .session-delete{opacity:1;}
+  .session-item:hover .session-meta{opacity:0;}
+
+  /* CHAT */
+  .chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+  .messages{flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:18px;}
+  .messages::-webkit-scrollbar{width:3px;}
+  .messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .scroll-btn{position:absolute;bottom:110px;right:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);width:34px;height:34px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all 0.2s;box-shadow:0 2px 8px #00000066;opacity:0;pointer-events:none;}
+  .scroll-btn.visible{opacity:1;pointer-events:all;}
+  .scroll-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text-muted);text-align:center;padding:40px;}
+  .empty-icon{font-size:2rem;opacity:0.25;}
+  .empty-state h2{font-size:1.1rem;font-weight:700;color:var(--text);opacity:0.4;}
+  .empty-state p{font-size:0.78rem;line-height:1.6;max-width:280px;}
+
+  /* MESSAGES */
+  .message{display:flex;gap:10px;max-width:800px;width:100%;margin:0 auto;animation:fadeUp 0.25s ease;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .message.user{flex-direction:row-reverse;}
+  .avatar{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;flex-shrink:0;font-weight:700;}
+  .avatar.ai{background:var(--user-bg);color:var(--accent);border:1px solid #00ff8833;font-family:'JetBrains Mono',monospace;font-size:0.6rem;}
+  .avatar.user{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);}
+  .bubble{flex:1;padding:11px 14px;border-radius:10px;font-size:0.86rem;line-height:1.7;max-width:calc(100% - 40px);word-break:break-word;}
+  .message.user .bubble{background:var(--user-bg);border:1px solid #00ff8822;border-radius:10px 2px 10px 10px;}
+  .message.ai .bubble{background:var(--ai-bg);border:1px solid var(--border);border-radius:2px 10px 10px 10px;}
+  .bubble pre{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:11px 13px;overflow-x:auto;margin:10px 0;position:relative;}
+  .bubble code{font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#a8ff78;}
+  .bubble p{margin-bottom:8px;}
+  .bubble p:last-child{margin-bottom:0;}
+  .copy-code-btn{position:absolute;top:6px;right:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);padding:2px 7px;border-radius:4px;font-size:0.62rem;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all 0.2s;}
+  .copy-code-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .typing{display:flex;gap:4px;padding:4px 0;align-items:center;}
+  .typing span{width:5px;height:5px;background:var(--accent);border-radius:50%;animation:bounce 1.2s infinite;}
+  .typing span:nth-child(2){animation-delay:0.2s}.typing span:nth-child(3){animation-delay:0.4s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-5px);opacity:1}}
+
+  /* FILE BANNER */
+  .file-banner{max-width:800px;margin:0 auto 8px;display:flex;align-items:center;justify-content:space-between;background:var(--surface3);border:1px solid var(--blue);border-radius:8px;padding:7px 12px;font-size:0.75rem;font-family:'JetBrains Mono',monospace;color:var(--blue);gap:10px;}
+  .file-banner button{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;padding:0 2px;transition:color 0.2s;}
+  .file-banner button:hover{color:var(--danger);}
+  .file-banner .chunk-info{font-size:0.65rem;color:var(--text-muted);margin-left:auto;}
+
+  /* INPUT */
+  .input-area{padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+  .input-wrapper{max-width:800px;margin:0 auto;display:flex;gap:8px;align-items:flex-end;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;transition:border-color 0.2s;}
+  .input-wrapper:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px #00ff8811;}
+  .attach-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;padding:2px 4px;transition:all 0.2s;flex-shrink:0;line-height:1;}
+  .attach-btn:hover{color:var(--accent);}
+  textarea{flex:1;background:transparent;border:none;color:var(--text);font-family:'Syne',sans-serif;font-size:0.86rem;resize:none;outline:none;line-height:1.5;max-height:140px;min-height:22px;}
+  textarea::placeholder{color:var(--text-muted);}
+  .send-btn{background:var(--accent);color:#000;border:none;width:32px;height:32px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all 0.2s;flex-shrink:0;}
+  .send-btn:hover{background:var(--accent2);transform:scale(1.05);}
+  .input-hint{text-align:center;font-size:0.62rem;color:var(--text-muted);margin-top:6px;font-family:'JetBrains Mono',monospace;}
+
+  /* CONTEXT PANEL */
+  .ctx-panel{width:300px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.25s ease;overflow:hidden;}
+  .ctx-panel.collapsed{width:0;}
+  .ctx-panel-inner{width:300px;display:flex;flex-direction:column;height:100%;overflow:hidden;}
+  .ctx-panel-header{padding:12px 14px;border-bottom:1px solid var(--border);font-size:0.62rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+  .ctx-panel-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px;}
+  .ctx-panel-body::-webkit-scrollbar{width:3px;}
+  .ctx-panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+  .ctx-section{display:flex;flex-direction:column;gap:7px;}
+  .ctx-label{font-size:0.63rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);display:flex;align-items:center;gap:6px;}
+  .badge{background:var(--accent);color:#000;font-size:0.54rem;padding:1px 5px;border-radius:3px;font-weight:700;}
+  .badge.off{background:var(--surface3);color:var(--text-muted);}
+  .ctx-textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.72rem;padding:9px 10px;border-radius:7px;resize:none;outline:none;line-height:1.5;transition:border-color 0.2s;width:100%;}
+  .ctx-textarea:focus{border-color:var(--accent);}
+  .ctx-textarea::placeholder{color:#3a3a3a;}
+  .ctx-toggle{display:flex;align-items:center;gap:8px;}
+  .toggle-switch{position:relative;width:34px;height:18px;flex-shrink:0;}
+  .toggle-switch input{opacity:0;width:0;height:0;}
+  .toggle-slider{position:absolute;inset:0;background:var(--surface3);border:1px solid var(--border);border-radius:18px;cursor:pointer;transition:all 0.2s;}
+  .toggle-slider:before{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:var(--text-muted);border-radius:50%;transition:all 0.2s;}
+  .toggle-switch input:checked + .toggle-slider{background:#00ff8822;border-color:var(--accent);}
+  .toggle-switch input:checked + .toggle-slider:before{transform:translateX(16px);background:var(--accent);}
+  .toggle-label{font-size:0.72rem;color:var(--text-muted);cursor:pointer;user-select:none;}
+  .persona-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  .persona-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);padding:7px 8px;border-radius:6px;font-size:0.68rem;cursor:pointer;text-align:left;transition:all 0.15s;font-family:'Syne',sans-serif;}
+  .persona-btn:hover{border-color:var(--accent);color:var(--text);}
+  .persona-btn.active{border-color:var(--accent);color:var(--accent);background:#00ff8811;}
+  .persona-btn .icon{font-size:0.9rem;display:block;margin-bottom:2px;}
+  .token-bar{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:0.64rem;color:var(--text-muted);}
+  .token-row{display:flex;justify-content:space-between;margin-bottom:3px;}
+  .token-val{color:var(--text);font-weight:600;}
+  .token-val.warn{color:var(--warn);}
+  .token-val.danger{color:var(--danger);}
+  .token-progress{height:3px;background:var(--border);border-radius:2px;margin-top:7px;overflow:hidden;}
+  .token-progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.3s;}
+  .token-progress-fill.warn{background:var(--warn);}
+  .token-progress-fill.danger{background:var(--danger);}
+  .ctx-btn{background:var(--surface3);border:1px solid var(--border);color:var(--text-muted);padding:6px 0;border-radius:6px;font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;}
+  .ctx-btn:hover{border-color:var(--danger);color:var(--danger);}
+  .save-indicator{font-size:0.62rem;font-family:'JetBrains Mono',monospace;color:var(--text-muted);text-align:right;min-height:14px;transition:color 0.3s;}
+  .save-indicator.saved{color:var(--accent);}
+
+  /* CHUNK RULES */
+  .chunk-rule-box{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px;}
+  .chunk-rule-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.72rem;color:var(--text-muted);}
+  .chunk-rule-row:last-child{margin-bottom:0;}
+  .chunk-rule-row input[type=number]{background:var(--surface3);border:1px solid var(--border);color:var(--text);width:52px;padding:3px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;outline:none;}
+  .chunk-rule-row input[type=number]:focus{border-color:var(--accent);}
+
+  .divider{height:1px;background:var(--border);}
+  .hidden{display:none!important;}
+  *{scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-dot"></div>SRQ AI</div>
+  <div class="header-center">
+    <div class="ctx-pill" id="pillPersona" onclick="openPanelTo('sectionPersona')">
+      <div class="dot"></div><span>persona</span>
+    </div>
+    <div class="ctx-pill" id="pillProject" onclick="openPanelTo('sectionProject')">
+      <div class="dot"></div><span>project ctx</span>
+    </div>
+    <div class="ctx-pill" id="pillCode" onclick="openPanelTo('sectionCode')">
+      <div class="dot"></div><span>code ctx</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">checking...</span>
+    </div>
+    <select id="modelSelect"><option>Loading...</option></select>
+    <button class="btn-icon" title="Context panel" onclick="togglePanel()">⚙</button>
+    <button class="btn-icon" title="Clear chat" onclick="clearChat()">🗑</button>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sessions -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      Chats
+      <button class="new-chat-btn" onclick="newSession()">+ New</button>
+    </div>
+    <div class="sessions-list" id="sessionsList"></div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-area">
+    <div class="messages" id="messages">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">⬡</div>
+        <h2>Local AI Ready</h2>
+        <p>Open ⚙ to set your persona and project context. Use 📎 to attach files.</p>
+      </div>
+    </div>
+    <button class="scroll-btn" id="scrollBtn" onclick="scrollToBottom(true)" title="Scroll to bottom">↓</button>
+
+    <div class="input-area">
+      <!-- File attached banner -->
+      <div id="fileBanner" class="file-banner hidden">
+        <span>📎</span>
+        <span id="fileBannerName">no file</span>
+        <span class="chunk-info" id="fileBannerChunks"></span>
+        <button onclick="clearFile()" title="Remove">✕</button>
+      </div>
+      <div class="input-wrapper">
+        <button class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Attach file (txt, js, py, php, json, csv...)">📎</button>
+        <input type="file" id="fileInput" style="display:none"
+          accept=".txt,.md,.js,.ts,.jsx,.tsx,.py,.php,.rb,.go,.rs,.java,.c,.cpp,.h,.cs,.html,.css,.scss,.json,.csv,.sql,.sh,.bash,.env,.xml,.yaml,.yml,.toml,.log"
+          onchange="handleFileAttach(this)">
+        <textarea id="userInput" placeholder="Ask anything... attach a file with 📎" rows="1"
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+      </div>
+      <div class="input-hint" id="inputHint">Enter to send · Shift+Enter for new line · 📎 attach any code/text file</div>
+    </div>
+  </div>
+
+  <!-- Context Panel -->
+  <div class="ctx-panel collapsed" id="ctxPanel">
+    <div class="ctx-panel-inner">
+      <div class="ctx-panel-header">
+        Context &amp; Persona
+        <button class="btn-icon" onclick="togglePanel()">✕</button>
+      </div>
+      <div class="ctx-panel-body">
+
+        <!-- Token Budget -->
+        <div class="ctx-section">
+          <div class="ctx-label">Context Budget</div>
+          <div class="token-bar">
+            <div class="token-row"><span>Est. tokens used</span><span class="token-val" id="tokenCount">0</span></div>
+            <div class="token-row"><span>Model limit</span><span class="token-val">2048</span></div>
+            <div class="token-progress"><div class="token-progress-fill" id="tokenFill" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Chunking Rules -->
+        <div class="ctx-section" id="sectionChunk">
+          <div class="ctx-label">📄 Large File Rules</div>
+          <div class="chunk-rule-box">
+            <div class="chunk-rule-row">
+              <span>Chunk size</span>
+              <input type="number" id="chunkSize" value="800" min="200" max="2000" step="100">
+              <span>tokens</span>
+            </div>
+            <div class="chunk-rule-row">
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleAutoChunk" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label" onclick="document.getElementById('toggleAutoChunk').click()">Auto-chunk large files</span>
+            </div>
+            <div class="chunk-rule-row" style="font-size:0.63rem;color:#444;margin-top:4px;">
+              Large files are split into chunks. AI summarizes each chunk first, then answers your question based on all summaries.
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Persona -->
+        <div class="ctx-section" id="sectionPersona">
+          <div class="ctx-label">AI Persona <span class="badge off" id="badgePersona">OFF</span></div>
+          <div class="persona-grid">
+            <button class="persona-btn" onclick="setPersona(this,'senior')" data-key="senior"><span class="icon">🧠</span>Senior Dev</button>
+            <button class="persona-btn" onclick="setPersona(this,'reviewer')" data-key="reviewer"><span class="icon">🔍</span>Reviewer</button>
+            <button class="persona-btn" onclick="setPersona(this,'teacher')" data-key="teacher"><span class="icon">📚</span>Teacher</button>
+            <button class="persona-btn" onclick="setPersona(this,'custom')" data-key="custom"><span class="icon">✏️</span>Custom</button>
+          </div>
+          <textarea class="ctx-textarea" id="systemPrompt" rows="4"
+            placeholder="Pick a preset or write your own system prompt..."
+            oninput="onCtxChange()"></textarea>
+          <div class="ctx-toggle">
+            <label class="toggle-switch">
+              <input type="checkbox" id="togglePersona" onchange="onCtxChange()">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label" onclick="document.getElementById('togglePersona').click()">Enable persona</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Project Context -->
+        <div class="ctx-section" id="sectionProject">
+          <div class="ctx-label">Project Context <span class="badge off" id="badgeProject">OFF</span></div>
+          <textarea class="ctx-textarea" id="projectCtx" rows="6"
+            placeholder="Your stack and goals. Example:
+- PHP 8 + MySQL
+- Vanilla JS, no frameworks
+- Building e-commerce cart
+- Keep code simple & fast"
+            oninput="onCtxChange()"></textarea>
+          <div class="ctx-toggle">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggleProject" onchange="onCtxChange()">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label" onclick="document.getElementById('toggleProject').click()">Include in every message</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Code Context -->
+        <div class="ctx-section" id="sectionCode">
+          <div class="ctx-label">Code Context <span class="badge off" id="badgeCode">OFF</span></div>
+          <textarea class="ctx-textarea" id="codeCtx" rows="7"
+            placeholder="Paste relevant code here. AI will reference it.
+Tip: paste only the relevant function — saves tokens!"
+            oninput="onCtxChange()"
+            style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;"></textarea>
+          <div class="ctx-toggle">
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggleCode" onchange="onCtxChange()">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label" onclick="document.getElementById('toggleCode').click()">Include in every message</span>
+          </div>
+          <button class="ctx-btn" onclick="clearCode()">Clear code</button>
+        </div>
+
+        <div class="divider"></div>
+        <div class="save-indicator" id="saveIndicator">context auto-saved to ./DB/</div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const OLLAMA_URL = 'http://localhost:11434';
+const DB_URL     = 'http://localhost:8080';
+
+const PERSONAS = {
+  senior:   `You are a senior software developer with 10+ years of experience. Write clean, efficient, well-commented code. Give direct practical answers. Point out bugs or edge cases. Be concise unless detail is needed.`,
+  reviewer: `You are a strict but fair code reviewer. Identify bugs, performance issues, security vulnerabilities, and style problems. Be specific, suggest fixes. Don't sugarcoat.`,
+  teacher:  `You are a patient programming teacher. Explain concepts clearly with examples. Break down complex topics step by step. Encourage good habits.`,
+};
+
+let sessions      = [];
+let currentSessionId = null;
+let isGenerating  = false;
+let abortController = null;
+let panelOpen     = false;
+let ctxSaveTimer  = null;
+let userScrolledUp = false;
+
+// Attached file state
+let attachedFile = null; // { name, content, chunks[] }
+
+// ─── INIT ──────────────────────────────────────────────────
+window.onload = async () => {
+  setupScrollTracking();
+  await checkOllama();
+  await loadModels();
+  await loadContext();
+  await loadSessionList();
+  updatePills();
+  updateTokens();
+};
+
+// ─── SMART SCROLL ──────────────────────────────────────────
+function setupScrollTracking() {
+  const c = document.getElementById('messages');
+  c.addEventListener('scroll', () => {
+    const dist = c.scrollHeight - c.scrollTop - c.clientHeight;
+    userScrolledUp = dist > 80;
+    document.getElementById('scrollBtn').classList.toggle('visible', userScrolledUp);
+  });
+}
+
+function scrollToBottom(force = false) {
+  const c = document.getElementById('messages');
+  if (force || !userScrolledUp) c.scrollTop = c.scrollHeight;
+}
+
+// ─── PANEL ─────────────────────────────────────────────────
+function togglePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('ctxPanel').classList.toggle('collapsed', !panelOpen);
+}
+
+function openPanelTo(sectionId) {
+  if (!panelOpen) { panelOpen = true; document.getElementById('ctxPanel').classList.remove('collapsed'); }
+  setTimeout(() => document.getElementById(sectionId)?.scrollIntoView({ behavior:'smooth', block:'start' }), 60);
+}
+
+// ─── OLLAMA ────────────────────────────────────────────────
+async function checkOllama() {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  try {
+    const r = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) { dot.className = 'status-dot online'; txt.textContent = 'connected'; }
+  } catch {
+    dot.className = 'status-dot error'; txt.textContent = 'ollama offline';
+  }
+}
+
+async function loadModels() {
+  const sel = document.getElementById('modelSelect');
+  try {
+    const r = await fetch(`${OLLAMA_URL}/api/tags`);
+    const data = await r.json();
+    const models = data.models || [];
+    if (!models.length) { sel.innerHTML = '<option>No models</option>'; return; }
+    sel.innerHTML = models.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+    const saved = localStorage.getItem('ai_selected_model');
+    if (saved && models.find(m => m.name === saved)) sel.value = saved;
+    sel.onchange = () => localStorage.setItem('ai_selected_model', sel.value);
+  } catch { sel.innerHTML = '<option>Ollama offline</option>'; }
+}
+
+// ─── FILE DB ───────────────────────────────────────────────
+async function dbGet(path) {
+  const r = await fetch(`${DB_URL}${path}`);
+  return r.json();
+}
+async function dbPost(path, data) {
+  await fetch(`${DB_URL}${path}`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+}
+async function dbDelete(path) {
+  await fetch(`${DB_URL}${path}`, { method:'DELETE' });
+}
+
+// ─── CONTEXT ───────────────────────────────────────────────
+async function loadContext() {
+  try {
+    const ctx = await dbGet('/db/context');
+    document.getElementById('systemPrompt').value    = ctx.systemPrompt  || '';
+    document.getElementById('projectCtx').value      = ctx.projectCtx    || '';
+    document.getElementById('codeCtx').value         = ctx.codeCtx       || '';
+    document.getElementById('togglePersona').checked = ctx.personaOn     || false;
+    document.getElementById('toggleProject').checked = ctx.projectOn     || false;
+    document.getElementById('toggleCode').checked    = ctx.codeOn        || false;
+    if (ctx.activePersona) {
+      document.querySelectorAll('.persona-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.key === ctx.activePersona));
+    }
+  } catch {}
+}
+
+function onCtxChange() {
+  updatePills(); updateTokens();
+  clearTimeout(ctxSaveTimer);
+  ctxSaveTimer = setTimeout(saveContext, 800);
+}
+
+async function saveContext() {
+  const ctx = {
+    systemPrompt:  document.getElementById('systemPrompt').value,
+    projectCtx:    document.getElementById('projectCtx').value,
+    codeCtx:       document.getElementById('codeCtx').value,
+    personaOn:     document.getElementById('togglePersona').checked,
+    projectOn:     document.getElementById('toggleProject').checked,
+    codeOn:        document.getElementById('toggleCode').checked,
+    activePersona: document.querySelector('.persona-btn.active')?.dataset.key || null,
+  };
+  try {
+    await dbPost('/db/context', ctx);
+    const ind = document.getElementById('saveIndicator');
+    ind.textContent = '✓ saved to ./DB/context.json';
+    ind.className = 'save-indicator saved';
+    setTimeout(() => { ind.textContent = 'context auto-saved to ./DB/'; ind.className = 'save-indicator'; }, 2000);
+  } catch {}
+}
+
+// ─── FILE ATTACHMENT ───────────────────────────────────────
+const CHUNK_CHARS = () => (parseInt(document.getElementById('chunkSize').value) || 800) * 3.5;
+
+function handleFileAttach(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = ''; // reset so same file can be re-attached
+
+  const maxSize = 2 * 1024 * 1024; // 2MB limit
+  if (file.size > maxSize) {
+    alert('File too large (max 2MB). Paste the relevant section instead.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const content = e.target.result;
+    const chunkSize = CHUNK_CHARS();
+    const chunks = splitIntoChunks(content, chunkSize);
+
+    attachedFile = { name: file.name, content, chunks };
+
+    // Show banner
+    document.getElementById('fileBanner').classList.remove('hidden');
+    document.getElementById('fileBannerName').textContent = file.name;
+    document.getElementById('fileBannerChunks').textContent =
+      chunks.length > 1 ? `${chunks.length} chunks · ~${Math.round(content.length/3.5)} tokens` : `~${Math.round(content.length/3.5)} tokens`;
+
+    // Auto-fill placeholder
+    document.getElementById('userInput').placeholder = `Ask about ${file.name}...`;
+    document.getElementById('userInput').focus();
+  };
+  reader.readAsText(file);
+}
+
+function splitIntoChunks(text, chunkChars) {
+  const chunks = [];
+  // Try to split on newlines cleanly
+  const lines = text.split('\n');
+  let current = '';
+  for (const line of lines) {
+    if ((current + line).length > chunkChars && current.length > 0) {
+      chunks.push(current.trim());
+      current = line + '\n';
+    } else {
+      current += line + '\n';
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+}
+
+function clearFile() {
+  attachedFile = null;
+  document.getElementById('fileBanner').classList.add('hidden');
+  document.getElementById('userInput').placeholder = 'Ask anything... attach a file with 📎';
+}
+
+// ─── CHUNKED FILE PROCESSING ───────────────────────────────
+async function processFileWithChunking(question, model, systemPrompt) {
+  const { name, chunks } = attachedFile;
+  const totalChunks = chunks.length;
+
+  if (totalChunks === 1) {
+    // Small file — just include directly
+    return [{
+      role: 'user',
+      content: `File: ${name}\n\n\`\`\`\n${chunks[0]}\n\`\`\`\n\n${question}`
+    }];
+  }
+
+  // Large file — summarize each chunk first
+  appendSystemNotice(`📄 File has ${totalChunks} chunks. Summarizing each chunk first...`);
+
+  const summaries = [];
+  for (let i = 0; i < totalChunks; i++) {
+    appendSystemNotice(`⏳ Processing chunk ${i + 1} of ${totalChunks}...`);
+
+    const chunkMessages = [];
+    if (systemPrompt) chunkMessages.push({ role: 'system', content: systemPrompt });
+    chunkMessages.push({
+      role: 'user',
+      content: `You are processing chunk ${i+1} of ${totalChunks} from file "${name}". Summarize the key points, functions, variables, and logic in this chunk. Be concise.\n\nChunk:\n\`\`\`\n${chunks[i]}\n\`\`\``
+    });
+
+    try {
+      const summary = await fetchOllamaSync(model, chunkMessages);
+      summaries.push(`--- Chunk ${i+1}/${totalChunks} Summary ---\n${summary}`);
+    } catch (e) {
+      summaries.push(`--- Chunk ${i+1}/${totalChunks} ---\n[Error summarizing this chunk]`);
+    }
+
+    if (abortController?.signal?.aborted) return null;
+  }
+
+  appendSystemNotice(`✅ All chunks summarized. Now answering your question...`);
+
+  // Build final messages with all summaries
+  const finalMessages = [];
+  if (systemPrompt) finalMessages.push({ role: 'system', content: systemPrompt });
+  finalMessages.push({
+    role: 'user',
+    content: `I have analyzed the file "${name}" in ${totalChunks} chunks. Here are the summaries of all chunks:\n\n${summaries.join('\n\n')}\n\nBased on this complete analysis, please answer:\n${question}`
+  });
+
+  return finalMessages;
+}
+
+async function fetchOllamaSync(model, messages) {
+  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: abortController?.signal,
+    body: JSON.stringify({ model, messages, stream: false })
+  });
+  const data = await res.json();
+  return data.message?.content || '';
+}
+
+function appendSystemNotice(text) {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.style.cssText = 'text-align:center;font-size:0.68rem;font-family:JetBrains Mono,monospace;color:var(--text-muted);padding:4px 0;';
+  div.textContent = text;
+  container.appendChild(div);
+  scrollToBottom(true);
+}
+
+// ─── SESSIONS ──────────────────────────────────────────────
+async function loadSessionList() {
+  try { sessions = await dbGet('/db/sessions'); } catch { sessions = []; }
+  renderSessions();
+  if (sessions.length > 0) await loadSession(sessions[0].id);
+}
+
+async function loadSession(id) {
+  currentSessionId = id;
+  renderSessions();
+  try {
+    const session = await dbGet(`/db/session/${id}`);
+    renderMessages(session.messages || []);
+  } catch { renderMessages([]); }
+}
+
+function renderMessages(messages) {
+  const container = document.getElementById('messages');
+  container.innerHTML = '';
+  if (!messages.length) {
+    container.innerHTML = `<div class="empty-state" id="emptyState">
+      <div class="empty-icon">⬡</div>
+      <h2>Local AI Ready</h2>
+      <p>Open ⚙ to set your persona and project context. Use 📎 to attach files.</p>
+    </div>`;
+  } else {
+    messages.forEach(m => appendMessage(m.role, m.content, false));
+    scrollToBottom(true);
+  }
+}
+
+async function newSession() {
+  const id = Date.now().toString();
+  const session = { id, title: 'New Chat', messages: [], created: Date.now() };
+  try { await dbPost('/db/session', session); } catch {}
+  sessions.unshift({ id, title: 'New Chat', created: Date.now(), messageCount: 0 });
+  renderSessions();
+  currentSessionId = id;
+  renderMessages([]);
+}
+
+async function deleteSession(e, id) {
+  e.stopPropagation();
+  try { await dbDelete(`/db/session/${id}`); } catch {}
+  sessions = sessions.filter(s => s.id !== id);
+  renderSessions();
+  if (currentSessionId === id) {
+    currentSessionId = null;
+    if (sessions.length > 0) await loadSession(sessions[0].id);
+    else renderMessages([]);
+  }
+}
+
+function renderSessions() {
+  const list = document.getElementById('sessionsList');
+  if (!sessions.length) {
+    list.innerHTML = '<div style="padding:14px;font-size:0.73rem;color:var(--text-muted);text-align:center">No chats yet</div>';
+    return;
+  }
+  list.innerHTML = sessions.map(s => `
+    <div class="session-item ${s.id === currentSessionId ? 'active' : ''}" onclick="loadSession('${s.id}')">
+      <span class="session-title">${escHtml(s.title)}</span>
+      <span class="session-meta">${s.messageCount || 0}</span>
+      <span class="session-delete" onclick="deleteSession(event,'${s.id}')">✕</span>
+    </div>
+  `).join('');
+}
+
+async function clearChat() {
+  if (!currentSessionId) return;
+  if (isGenerating) abortController?.abort();
+  const session = { id: currentSessionId, title: 'New Chat', messages: [], created: Date.now() };
+  try { await dbPost('/db/session', session); } catch {}
+  const s = sessions.find(s => s.id === currentSessionId);
+  if (s) { s.title = 'New Chat'; s.messageCount = 0; }
+  renderSessions();
+  renderMessages([]);
+  clearFile();
+}
+
+// ─── SYSTEM PROMPT BUILDER ─────────────────────────────────
+function buildSystemPrompt() {
+  const parts = [];
+  if (document.getElementById('togglePersona').checked) {
+    const p = document.getElementById('systemPrompt').value.trim();
+    if (p) parts.push(p);
+  }
+  if (document.getElementById('toggleProject').checked) {
+    const p = document.getElementById('projectCtx').value.trim();
+    if (p) parts.push(`## Project Context\n${p}`);
+  }
+  if (document.getElementById('toggleCode').checked) {
+    const c = document.getElementById('codeCtx').value.trim();
+    if (c) parts.push(`## Reference Code\n\`\`\`\n${c}\n\`\`\``);
+  }
+  return parts.join('\n\n');
+}
+
+// ─── SEND MESSAGE ──────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isGenerating) return;
+
+  isGenerating = true;
+  updateSendBtn(true);
+  input.value = '';
+  input.style.height = 'auto';
+  input.placeholder = attachedFile ? `Ask about ${attachedFile.name}...` : 'Ask anything... attach a file with 📎';
+
+  try {
+    if (!currentSessionId) await newSession();
+
+    const model = document.getElementById('modelSelect').value;
+    if (!model || model.includes('offline') || model.includes('No model') || model.includes('Loading')) {
+      appendMessage('ai', '⚠️ No model selected or Ollama not running.');
+      return;
+    }
+
+    let session;
+    try { session = await dbGet(`/db/session/${currentSessionId}`); } catch {}
+    if (!session || !Array.isArray(session.messages)) {
+      session = { id: currentSessionId, title: 'New Chat', messages: [], created: Date.now() };
+    }
+
+    const emptyEl = document.getElementById('emptyState');
+    if (emptyEl) emptyEl.classList.add('hidden');
+
+    const displayText = attachedFile ? `📎 ${attachedFile.name}\n\n${text}` : text;
+    session.messages.push({ role: 'user', content: displayText });
+    if (session.title === 'New Chat') session.title = text.slice(0, 36) + (text.length > 36 ? '…' : '');
+
+    appendMessage('user', displayText, true);
+    userScrolledUp = false;
+
+    const systemPrompt = buildSystemPrompt();
+    abortController = new AbortController();
+
+    let apiMessages;
+
+    // FILE MODE: chunked or direct
+    if (attachedFile) {
+      const autoChunk = document.getElementById('toggleAutoChunk').checked;
+      if (autoChunk && attachedFile.chunks.length > 1) {
+        // Chunked processing — this shows notices and summarizes internally
+        apiMessages = await processFileWithChunking(text, model, systemPrompt);
+        if (!apiMessages) return; // aborted
+      } else {
+        // Small file or chunking off — include directly
+        apiMessages = [];
+        if (systemPrompt) apiMessages.push({ role: 'system', content: systemPrompt });
+        apiMessages.push({
+          role: 'user',
+          content: `File: ${attachedFile.name}\n\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${text}`
+        });
+      }
+      // Clear file after sending
+      clearFile();
+    } else {
+      // Normal chat mode — include full conversation history
+      apiMessages = [];
+      if (systemPrompt) apiMessages.push({ role: 'system', content: systemPrompt });
+      session.messages.forEach(m => apiMessages.push({ role: m.role, content: m.content }));
+    }
+
+    const typingEl = appendTyping();
+
+    let res;
+    try {
+      res = await fetch(`${OLLAMA_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abortController.signal,
+        body: JSON.stringify({ model, messages: apiMessages, stream: true })
+      });
+    } catch (fetchErr) {
+      typingEl.remove();
+      if (fetchErr.name !== 'AbortError')
+        appendMessage('ai', `⚠️ Cannot reach Ollama. Is it running?`);
+      return;
+    }
+
+    typingEl.remove();
+    const aiBubble = appendMessage('ai', '', false, true);
+    const bubbleContent = aiBubble.querySelector('.bubble-content');
+    let fullResponse = '';
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      for (const line of decoder.decode(value).split('\n').filter(Boolean)) {
+        try {
+          const data = JSON.parse(line);
+          if (data.message?.content) {
+            fullResponse += data.message.content;
+            bubbleContent.innerHTML = formatMessage(fullResponse);
+            addCopyButtons(bubbleContent);
+            scrollToBottom();
+          }
+        } catch {}
+      }
+    }
+
+    if (fullResponse) {
+      session.messages.push({ role: 'assistant', content: fullResponse });
+      try { await dbPost('/db/session', session); } catch {}
+      const s = sessions.find(s => s.id === currentSessionId);
+      if (s) { s.title = session.title; s.messageCount = session.messages.length; }
+      renderSessions();
+    }
+
+  } catch (err) {
+    if (err.name !== 'AbortError') appendMessage('ai', `⚠️ Error: ${err.message}`);
+  } finally {
+    isGenerating = false;
+    abortController = null;
+    updateSendBtn(false);
+  }
+}
+
+function stopGeneration() { abortController?.abort(); }
+
+function updateSendBtn(generating) {
+  const btn = document.getElementById('sendBtn');
+  const hint = document.getElementById('inputHint');
+  if (generating) {
+    btn.innerHTML = '■'; btn.onclick = stopGeneration; btn.style.background = 'var(--danger)';
+    hint.textContent = 'Generating... click ■ to stop';
+  } else {
+    btn.innerHTML = '↑'; btn.onclick = sendMessage; btn.style.background = 'var(--accent)';
+    hint.textContent = 'Enter to send · Shift+Enter for new line · 📎 attach any code/text file';
+  }
+}
+
+// ─── PERSONA ───────────────────────────────────────────────
+function setPersona(btn, key) {
+  document.querySelectorAll('.persona-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (key !== 'custom') document.getElementById('systemPrompt').value = PERSONAS[key];
+  else document.getElementById('systemPrompt').focus();
+  document.getElementById('togglePersona').checked = true;
+  onCtxChange();
+}
+
+// ─── PILLS & BADGES ────────────────────────────────────────
+function updatePills() {
+  const personaOn = document.getElementById('togglePersona').checked && document.getElementById('systemPrompt').value.trim();
+  const projectOn = document.getElementById('toggleProject').checked && document.getElementById('projectCtx').value.trim();
+  const codeOn    = document.getElementById('toggleCode').checked    && document.getElementById('codeCtx').value.trim();
+  setPill('pillPersona', 'badgePersona', personaOn);
+  setPill('pillProject', 'badgeProject', projectOn);
+  setPill('pillCode',    'badgeCode',    codeOn);
+}
+
+function setPill(pillId, badgeId, active) {
+  document.getElementById(pillId).classList.toggle('active', !!active);
+  const badge = document.getElementById(badgeId);
+  badge.textContent = active ? 'ON' : 'OFF';
+  badge.classList.toggle('off', !active);
+}
+
+// ─── TOKEN ESTIMATOR ───────────────────────────────────────
+function updateTokens() {
+  let total = 0;
+  if (document.getElementById('togglePersona').checked) total += Math.ceil(document.getElementById('systemPrompt').value.length / 3.5);
+  if (document.getElementById('toggleProject').checked) total += Math.ceil(document.getElementById('projectCtx').value.length / 3.5);
+  if (document.getElementById('toggleCode').checked)    total += Math.ceil(document.getElementById('codeCtx').value.length / 3.5);
+  const pct = Math.min((total / 2048) * 100, 100);
+  const countEl = document.getElementById('tokenCount');
+  const fillEl  = document.getElementById('tokenFill');
+  countEl.textContent = total;
+  fillEl.style.width  = pct + '%';
+  countEl.className = 'token-val' + (pct > 90 ? ' danger' : pct > 65 ? ' warn' : '');
+  fillEl.className  = 'token-progress-fill' + (pct > 90 ? ' danger' : pct > 65 ? ' warn' : '');
+}
+
+function clearCode() {
+  document.getElementById('codeCtx').value = '';
+  document.getElementById('toggleCode').checked = false;
+  onCtxChange();
+}
+
+// ─── DOM HELPERS ───────────────────────────────────────────
+function appendMessage(role, content, scroll = true, streaming = false) {
+  const emptyEl = document.getElementById('emptyState');
+  if (emptyEl) emptyEl.classList.add('hidden');
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.innerHTML = `
+    <div class="avatar ${role}">${role === 'user' ? '👤' : 'AI'}</div>
+    <div class="bubble"><div class="bubble-content">${streaming ? '' : formatMessage(content)}</div></div>`;
+  if (!streaming && !scroll) addCopyButtons(div.querySelector('.bubble-content'));
+  container.appendChild(div);
+  if (scroll) scrollToBottom(true);
+  return div;
+}
+
+function appendTyping() {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'message ai';
+  div.innerHTML = `<div class="avatar ai">AI</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  container.appendChild(div);
+  scrollToBottom(true);
+  return div;
+}
+
+function formatMessage(text) {
+  // Step 1: Extract code blocks, replace with placeholders to protect them
+  const codeBlocks = [];
+  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre><button class="copy-code-btn" onclick="copyCode(this)">copy</button><code>${escHtml(code.trim())}</code></pre>`);
+    return `%%CODEBLOCK_${idx}%%`;
+  });
+
+  // Step 2: Extract inline code, replace with placeholders
+  const inlineCodes = [];
+  text = text.replace(/`([^`]+)`/g, (_, code) => {
+    const idx = inlineCodes.length;
+    inlineCodes.push(`<code>${escHtml(code)}</code>`);
+    return `%%INLINE_${idx}%%`;
+  });
+
+  // Step 3: NOW escape all remaining HTML (this stops AI-generated HTML from rendering)
+  text = escHtml(text);
+
+  // Step 4: Apply markdown formatting on safe escaped text
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/^### (.+)$/gm, '<strong style="font-size:0.95em;display:block;margin:6px 0 2px">$1</strong>');
+  text = text.replace(/^## (.+)$/gm,  '<strong style="font-size:1em;display:block;margin:8px 0 3px">$1</strong>');
+  text = text.replace(/^- (.+)$/gm, '• $1');
+  text = text.replace(/\n/g, '<br>');
+
+  // Step 5: Restore code blocks and inline code
+  codeBlocks.forEach((block, i) => { text = text.replace(`%%CODEBLOCK_${i}%%`, block); });
+  inlineCodes.forEach((code, i) => { text = text.replace(`%%INLINE_${i}%%`, code); });
+
+  return text;
+}
+
+function addCopyButtons(el) {
+  el.querySelectorAll('pre:not(:has(.copy-code-btn))').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-code-btn'; btn.textContent = 'copy';
+    btn.onclick = () => copyCode(btn);
+    pre.insertBefore(btn, pre.firstChild);
+  });
+}
+
+function copyCode(btn) {
+  navigator.clipboard.writeText(btn.parentElement.querySelector('code').textContent).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 2000);
+  });
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 140) + 'px'; }
+</script>
+</body>
+</html>
